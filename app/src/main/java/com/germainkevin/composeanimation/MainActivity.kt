@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.updateTransition
@@ -13,10 +14,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.SpanStyle
@@ -32,6 +35,10 @@ import com.germainkevin.composeanimation.ui.theme.ComposeAnimationTheme
 import com.germainkevin.composeanimation.ui.theme.DARK00
 import com.germainkevin.composeanimation.ui.theme.DARK01
 import com.germainkevin.composeanimation.ui.theme.Orange
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Playing around with animation here
@@ -108,10 +115,75 @@ class MainActivity : ComponentActivity() {
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         SimpleBox(boxColor = boxColor, boxSize = boxSize)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        // DoubleTapToLikeAnimation variables
+                        val coroutineScope = rememberCoroutineScope()
+                        val heartAnimationToggle = remember { mutableStateOf(false) }
+                        Row {
+                            Text(text = "Toggle for heart animation")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(
+                                checked = heartAnimationToggle.value,
+                                onCheckedChange = { heartAnimationToggle.value = it }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        DoubleTapToLikeAnimation(
+                            coroutineScope = coroutineScope,
+                            heartAnimationToggle = heartAnimationToggle
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DoubleTapToLikeAnimation(
+    coroutineScope: CoroutineScope,
+    heartAnimationToggle: MutableState<Boolean>
+) {
+    var alpha by remember { mutableStateOf(0f) }
+    var scale by remember { mutableStateOf(0f) }
+    LaunchedEffect(key1 = heartAnimationToggle.value) {
+        coroutineScope.launch {
+            // Created two sub coroutines, So both coroutines run in parallel
+            // Enter animation
+            coroutineScope {
+                launch { // fade in
+                    animate(0f, 1f) { value, _ -> alpha = value }
+                }
+                launch { // scale up
+                    animate(0f, 2f) { value, _ -> scale = value }
+                }
+            }
+            // Exit animation
+            coroutineScope {
+                launch { // fade out
+                    animate(1f, 0f) { value, _ -> alpha = value }
+                }
+                launch { // scale up
+                    animate(2f, 4f) { value, _ -> scale = value }
+                }
+            }
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        val imageScale = if (scale == 0f) 24.dp else (24 * scale).dp
+        Image(
+            imageVector = Icons.Default.Favorite,
+            colorFilter = ColorFilter.tint(Color.Red),
+            contentDescription = "",
+            modifier = Modifier
+                .size(imageScale)
+                .alpha(alpha = alpha)
+        )
     }
 }
 
